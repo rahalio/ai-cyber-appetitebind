@@ -1,0 +1,1849 @@
+openapi: 3.0.3
+info:
+  title: Appetitebind
+  version: 0.1.0
+  description: >-
+    Enterprise AI risk operating system that binds every AI use case to risk
+    appetite and a fairness policy, runs continuous control testing with a
+    governed kill-switch, and predicts residual-risk threshold breaches before
+    the board pack is written. Not a cyber SOC tool and not a model-validation
+    factory — the RMF lifecycle for AI itself.
+  x-product-slug: ai-cyber-appetitebind
+  x-source: ai-in-cyber/deloitte-gx-ai-and-risk-management/
+servers:
+  - url: https://api.example.com
+tags:
+  - name: UseCases
+    description: AI use-case inventory and ownership
+  - name: Appetite
+    description: Appetite criteria and binding decisions
+  - name: Fairness
+    description: Fairness policy and case assessments
+  - name: Assessments
+    description: Risk assessment workspace and sign-off
+  - name: Controls
+    description: Control tests, hand-to-human, and kill-switches
+  - name: Monitoring
+    description: Technical, business, operational, and complaint metrics
+  - name: Predictions
+    description: Leading-indicator breach forecasts
+  - name: Governance
+    description: Issues, variations, three-lines evidence, and packs
+paths:
+  /v1/use-cases:
+    get:
+      operationId: listAiUseCases
+      tags: [UseCases]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [proposed, assessing, approved, production, suspended, retired]
+        - name: continuousLearning
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: AI use-case inventory page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAiUseCase"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: registerAiUseCase
+      tags: [UseCases]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiUseCaseCreate"
+      responses:
+        "201":
+          description: Use case registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAiUseCase"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/use-cases/{useCaseId}:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    get:
+      operationId: getAiUseCase
+      tags: [UseCases]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Use case with owner and lifecycle state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAiUseCase"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/use-cases/{useCaseId}/owner:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    put:
+      operationId: assignUseCaseOwner
+      tags: [UseCases]
+      description: >-
+        Named accountable owner responsible for approval, review triggers, and
+        updates when accuracy, fairness, or compliance factors change.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ownerId]
+              properties:
+                ownerId:
+                  type: string
+                accountableRegimeRole:
+                  type: string
+                  description: e.g. SM&CR senior manager reference
+      responses:
+        "200":
+          description: Owner assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAiUseCase"
+  /v1/appetite-criteria:
+    get:
+      operationId: getAppetiteCriteria
+      tags: [Appetite]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Standard assessment criteria applied to all AI use cases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAppetiteCriteria"
+    put:
+      operationId: updateAppetiteCriteria
+      tags: [Appetite]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppetiteCriteria"
+      responses:
+        "200":
+          description: Criteria updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAppetiteCriteria"
+  /v1/use-cases/{useCaseId}/appetite-bindings:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    get:
+      operationId: listAppetiteBindings
+      tags: [Appetite]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Appetite binding history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAppetiteBinding"
+    post:
+      operationId: bindUseCaseToAppetite
+      tags: [Appetite]
+      description: >-
+        Record appetite-binding decision. Production traffic must not be enabled
+        without a current binding that permits go-live.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppetiteBindingCreate"
+      responses:
+        "201":
+          description: Binding recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAppetiteBinding"
+        "409":
+          description: Fairness assessment missing for customer-facing case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/fairness-policy:
+    get:
+      operationId: getFairnessPolicy
+      tags: [Fairness]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Firm fairness policy with measurable thresholds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeFairnessPolicy"
+    put:
+      operationId: updateFairnessPolicy
+      tags: [Fairness]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FairnessPolicy"
+      responses:
+        "200":
+          description: Fairness policy updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeFairnessPolicy"
+  /v1/use-cases/{useCaseId}/fairness-assessments:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    get:
+      operationId: listFairnessAssessments
+      tags: [Fairness]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Fairness assessments for the use case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeFairnessAssessment"
+    post:
+      operationId: createFairnessAssessment
+      tags: [Fairness]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FairnessAssessmentCreate"
+      responses:
+        "201":
+          description: Fairness assessment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeFairnessAssessment"
+  /v1/use-cases/{useCaseId}/risk-identifications:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    post:
+      operationId: recordRiskIdentification
+      tags: [Assessments]
+      description: >-
+        Continuous identification trigger — use expansion, data change, or
+        decision-driver drift.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskIdentificationCreate"
+      responses:
+        "201":
+          description: Re-identification recorded; reassessment may be required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRiskIdentification"
+  /v1/assessments:
+    get:
+      operationId: listRiskAssessments
+      tags: [Assessments]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: useCaseId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, in_review, signed_off, rejected]
+      responses:
+        "200":
+          description: Risk assessments page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeRiskAssessment"
+    post:
+      operationId: createRiskAssessment
+      tags: [Assessments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskAssessmentCreate"
+      responses:
+        "201":
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRiskAssessment"
+  /v1/assessments/{assessmentId}/reference-comparison:
+    parameters:
+      - $ref: "#/components/parameters/AssessmentId"
+    post:
+      operationId: recordReferenceComparison
+      tags: [Assessments]
+      description: Compare AI outcomes to non-AI reference model or rules.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceComparison"
+      responses:
+        "200":
+          description: Comparison attached to assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRiskAssessment"
+  /v1/assessments/{assessmentId}/sign-off:
+    parameters:
+      - $ref: "#/components/parameters/AssessmentId"
+    post:
+      operationId: signOffRiskAssessment
+      tags: [Assessments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThreeLinesSignOff"
+      responses:
+        "200":
+          description: Multi-stakeholder sign-off recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeRiskAssessment"
+  /v1/control-tests:
+    get:
+      operationId: listAiControlTests
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: useCaseId
+          in: query
+          schema:
+            type: string
+        - name: testType
+          in: query
+          schema:
+            type: string
+            enum: [out_of_sample, stress, customer_journey, data_bias, accuracy]
+      responses:
+        "200":
+          description: Control tests page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAiControlTest"
+    post:
+      operationId: scheduleAiControlTest
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiControlTestCreate"
+      responses:
+        "201":
+          description: Control test scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAiControlTest"
+  /v1/control-tests/{testId}/evidence:
+    parameters:
+      - $ref: "#/components/parameters/TestId"
+    post:
+      operationId: submitControlTestEvidence
+      tags: [Controls]
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestEvidence"
+      responses:
+        "201":
+          description: Evidence captured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAiControlTest"
+  /v1/use-cases/{useCaseId}/hand-to-human-rules:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    get:
+      operationId: listHandToHumanRules
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Hand-to-human rules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeHandToHumanRule"
+    put:
+      operationId: setHandToHumanRules
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rules]
+              properties:
+                rules:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/HandToHumanRule"
+      responses:
+        "200":
+          description: Rules set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeHandToHumanRule"
+  /v1/use-cases/{useCaseId}/kill-switch:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    get:
+      operationId: getKillSwitch
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Kill-switch configuration and last drill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeKillSwitch"
+    put:
+      operationId: registerKillSwitch
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KillSwitch"
+      responses:
+        "200":
+          description: Kill-switch registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeKillSwitch"
+  /v1/use-cases/{useCaseId}/kill-switch/drill:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    post:
+      operationId: drillKillSwitch
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [executedBy]
+              properties:
+                executedBy:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Drill recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeKillSwitchDrill"
+  /v1/use-cases/{useCaseId}/kill-switch/execute:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    post:
+      operationId: executeKillSwitch
+      tags: [Controls]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [executedBy, rationale]
+              properties:
+                executedBy:
+                  type: string
+                rationale:
+                  type: string
+      responses:
+        "202":
+          description: Kill-switch execution accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeKillSwitch"
+  /v1/monitoring/metrics:
+    get:
+      operationId: listMonitoringMetrics
+      tags: [Monitoring]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: useCaseId
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [technical, business, operational, complaint, data_shift]
+      responses:
+        "200":
+          description: Monitoring metrics page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeMonitoringMetric"
+    post:
+      operationId: ingestMonitoringMetric
+      tags: [Monitoring]
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonitoringMetricIngest"
+      responses:
+        "202":
+          description: Metric accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMonitoringMetric"
+  /v1/monitoring/complaints:
+    post:
+      operationId: ingestComplaintSignal
+      tags: [Monitoring]
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintSignal"
+      responses:
+        "202":
+          description: Complaint signal linked to use case review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeComplaintSignal"
+  /v1/monitoring/data-shifts:
+    post:
+      operationId: ingestDataShiftSignal
+      tags: [Monitoring]
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataShiftSignal"
+      responses:
+        "202":
+          description: Data-shift signal accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDataShiftSignal"
+  /v1/predictions/breaches:
+    get:
+      operationId: listBreachPredictions
+      tags: [Predictions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: useCaseId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, actioned, realised, dismissed]
+      responses:
+        "200":
+          description: Predicted appetite or fairness breaches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeBreachPrediction"
+  /v1/predictions/breaches/run:
+    post:
+      operationId: runBreachPrediction
+      tags: [Predictions]
+      description: >-
+        Forecast approaching appetite or fairness threshold breaches from
+        leading indicators before the board pack is finalised.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                useCaseId:
+                  type: string
+                horizonDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 90
+                  default: 30
+      responses:
+        "200":
+          description: Prediction run complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeBreachPrediction"
+  /v1/predictions/breaches/{predictionId}/action:
+    parameters:
+      - $ref: "#/components/parameters/PredictionId"
+    post:
+      operationId: actionBreachPrediction
+      tags: [Predictions]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, rationale]
+              properties:
+                action:
+                  type: string
+                  enum: [governance_task, suspend_traffic, reassess, dismiss]
+                rationale:
+                  type: string
+      responses:
+        "200":
+          description: Prediction actioned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeBreachPrediction"
+  /v1/issues:
+    get:
+      operationId: listIssues
+      tags: [Governance]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: useCaseId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, remediating, closed]
+      responses:
+        "200":
+          description: Issues page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeIssue"
+    post:
+      operationId: openIssue
+      tags: [Governance]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueCreate"
+      responses:
+        "201":
+          description: Issue opened to auditable standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeIssue"
+  /v1/use-cases/{useCaseId}/variations:
+    parameters:
+      - $ref: "#/components/parameters/UseCaseId"
+    get:
+      operationId: listAlgorithmVariations
+      tags: [Governance]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Algorithm variation history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeAlgorithmVariation"
+    post:
+      operationId: recordAlgorithmVariation
+      tags: [Governance]
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlgorithmVariationCreate"
+      responses:
+        "201":
+          description: Variation recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAlgorithmVariation"
+  /v1/board-snapshots:
+    post:
+      operationId: publishBoardSnapshot
+      tags: [Governance]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asOf:
+                  type: string
+                  format: date-time
+                includeOpenPredictions:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Board snapshot with residual AI risk trajectory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeBoardSnapshot"
+  /v1/supervisory-exports:
+    post:
+      operationId: createSupervisoryExport
+      tags: [Governance]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                useCaseIds:
+                  type: array
+                  items:
+                    type: string
+                includeKillSwitchDrills:
+                  type: boolean
+                  default: true
+                examinationReference:
+                  type: string
+      responses:
+        "201":
+          description: Supervisory pack export created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeSupervisoryExport"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    UseCaseId:
+      name: useCaseId
+      in: path
+      required: true
+      schema:
+        type: string
+    AssessmentId:
+      name: assessmentId
+      in: path
+      required: true
+      schema:
+        type: string
+    TestId:
+      name: testId
+      in: path
+      required: true
+      schema:
+        type: string
+    PredictionId:
+      name: predictionId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    AiUseCase:
+      type: object
+      required: [id, name, status, ownerId]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [proposed, assessing, approved, production, suspended, retired]
+        ownerId:
+          type: string
+        continuousLearning:
+          type: boolean
+        externalFacing:
+          type: boolean
+        customerImpact:
+          type: string
+          enum: [none, low, significant, high]
+        sector:
+          type: string
+          enum: [banking, insurance, other_fs]
+        mlopsRef:
+          type: string
+    AiUseCaseCreate:
+      type: object
+      required: [name, ownerId]
+      properties:
+        name:
+          type: string
+        ownerId:
+          type: string
+        continuousLearning:
+          type: boolean
+          default: false
+        externalFacing:
+          type: boolean
+          default: false
+        customerImpact:
+          type: string
+          enum: [none, low, significant, high]
+        sector:
+          type: string
+          enum: [banking, insurance, other_fs]
+        description:
+          type: string
+    AppetiteCriteria:
+      type: object
+      required: [version, questions]
+      properties:
+        version:
+          type: string
+        questions:
+          type: array
+          items:
+            type: object
+            required: [id, prompt]
+            properties:
+              id:
+                type: string
+              prompt:
+                type: string
+              weight:
+                type: number
+                format: float
+        approvedBy:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+    AppetiteBinding:
+      type: object
+      required: [id, useCaseId, decision, boundAt]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        decision:
+          type: string
+          enum: [within_appetite, conditional, outside_appetite]
+        answers:
+          type: object
+          additionalProperties:
+            type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        residualRiskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        boundBy:
+          type: string
+        boundAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    AppetiteBindingCreate:
+      type: object
+      required: [decision, answers]
+      properties:
+        decision:
+          type: string
+          enum: [within_appetite, conditional, outside_appetite]
+        answers:
+          type: object
+          additionalProperties:
+            type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        residualRiskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        expiresAt:
+          type: string
+          format: date-time
+    FairnessPolicy:
+      type: object
+      required: [version, thresholds]
+      properties:
+        version:
+          type: string
+        narrative:
+          type: string
+        thresholds:
+          type: array
+          items:
+            type: object
+            required: [metric, limit]
+            properties:
+              metric:
+                type: string
+              limit:
+                type: number
+                format: float
+              segment:
+                type: string
+        approvedBy:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+    FairnessAssessment:
+      type: object
+      required: [id, useCaseId, outcome]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        outcome:
+          type: string
+          enum: [pass, conditional, fail]
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+        vulnerableCustomerConsidered:
+          type: boolean
+        assessedBy:
+          type: string
+        assessedAt:
+          type: string
+          format: date-time
+    FairnessAssessmentCreate:
+      type: object
+      required: [outcome, metrics]
+      properties:
+        outcome:
+          type: string
+          enum: [pass, conditional, fail]
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+        vulnerableCustomerConsidered:
+          type: boolean
+          default: true
+        notes:
+          type: string
+    RiskIdentification:
+      type: object
+      required: [id, useCaseId, trigger, identifiedAt]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        trigger:
+          type: string
+          enum: [use_expansion, data_change, driver_drift, regulatory_change, periodic]
+        description:
+          type: string
+        reassessmentRequired:
+          type: boolean
+        identifiedAt:
+          type: string
+          format: date-time
+    RiskIdentificationCreate:
+      type: object
+      required: [trigger]
+      properties:
+        trigger:
+          type: string
+          enum: [use_expansion, data_change, driver_drift, regulatory_change, periodic]
+        description:
+          type: string
+        reassessmentRequired:
+          type: boolean
+          default: true
+    RiskAssessment:
+      type: object
+      required: [id, useCaseId, status]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        status:
+          type: string
+          enum: [draft, in_review, signed_off, rejected]
+        technicalParameters:
+          type: object
+          additionalProperties:
+            type: string
+        businessParameters:
+          type: object
+          additionalProperties:
+            type: string
+        operationalParameters:
+          type: object
+          additionalProperties:
+            type: string
+        referenceComparison:
+          $ref: "#/components/schemas/ReferenceComparison"
+        signOffs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThreeLinesSignOff"
+    RiskAssessmentCreate:
+      type: object
+      required: [useCaseId]
+      properties:
+        useCaseId:
+          type: string
+        technicalParameters:
+          type: object
+          additionalProperties:
+            type: string
+        businessParameters:
+          type: object
+          additionalProperties:
+            type: string
+        operationalParameters:
+          type: object
+          additionalProperties:
+            type: string
+    ReferenceComparison:
+      type: object
+      required: [referenceType, varianceSummary]
+      properties:
+        referenceType:
+          type: string
+          enum: [non_ai_model, rules_engine, prior_version]
+        varianceSummary:
+          type: string
+        materialVariance:
+          type: boolean
+        rationale:
+          type: string
+        decisionDriversReviewed:
+          type: array
+          items:
+            type: string
+    ThreeLinesSignOff:
+      type: object
+      required: [line, roleId, decision]
+      properties:
+        line:
+          type: string
+          enum: [first, second, third]
+        roleId:
+          type: string
+        decision:
+          type: string
+          enum: [approve, conditional, reject]
+        comments:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+    AiControlTest:
+      type: object
+      required: [id, useCaseId, testType, status]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        testType:
+          type: string
+          enum: [out_of_sample, stress, customer_journey, data_bias, accuracy]
+        status:
+          type: string
+          enum: [scheduled, running, passed, failed]
+        frequency:
+          type: string
+        lastEvidenceAt:
+          type: string
+          format: date-time
+    AiControlTestCreate:
+      type: object
+      required: [useCaseId, testType]
+      properties:
+        useCaseId:
+          type: string
+        testType:
+          type: string
+          enum: [out_of_sample, stress, customer_journey, data_bias, accuracy]
+        frequency:
+          type: string
+        ownerId:
+          type: string
+    TestEvidence:
+      type: object
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          enum: [passed, failed]
+        evidenceRef:
+          type: string
+        detail:
+          type: string
+        sampleSize:
+          type: integer
+    HandToHumanRule:
+      type: object
+      required: [id, condition, destinationRole]
+      properties:
+        id:
+          type: string
+        condition:
+          type: string
+          description: e.g. confidence below tolerance or risk outside band
+        destinationRole:
+          type: string
+          example: human_underwriter
+        active:
+          type: boolean
+    KillSwitch:
+      type: object
+      required: [useCaseId, executableByRole, drillCadenceDays]
+      properties:
+        useCaseId:
+          type: string
+        executableByRole:
+          type: string
+        bcpReference:
+          type: string
+        remediationProtocol:
+          type: string
+        drillCadenceDays:
+          type: integer
+        lastDrillAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [registered, drilled, executed, inactive]
+    KillSwitchDrill:
+      type: object
+      required: [id, useCaseId, executedBy, drilledAt]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        executedBy:
+          type: string
+        drilledAt:
+          type: string
+          format: date-time
+        timeToHaltSeconds:
+          type: integer
+        notes:
+          type: string
+    MonitoringMetric:
+      type: object
+      required: [id, useCaseId, category, name, value]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        category:
+          type: string
+          enum: [technical, business, operational, complaint, data_shift]
+        name:
+          type: string
+        value:
+          type: number
+          format: float
+        threshold:
+          type: number
+          format: float
+        observedAt:
+          type: string
+          format: date-time
+    MonitoringMetricIngest:
+      type: object
+      required: [useCaseId, category, name, value]
+      properties:
+        useCaseId:
+          type: string
+        category:
+          type: string
+          enum: [technical, business, operational, complaint, data_shift]
+        name:
+          type: string
+        value:
+          type: number
+          format: float
+        threshold:
+          type: number
+          format: float
+        observedAt:
+          type: string
+          format: date-time
+    ComplaintSignal:
+      type: object
+      required: [useCaseId, taxonomy]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        taxonomy:
+          type: string
+          enum: [discrimination, unfair_outcome, explainability, other_conduct]
+        externalComplaintId:
+          type: string
+        receivedAt:
+          type: string
+          format: date-time
+    DataShiftSignal:
+      type: object
+      required: [useCaseId, featureOrSegment, shiftMagnitude]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        featureOrSegment:
+          type: string
+        shiftMagnitude:
+          type: number
+          format: float
+        detectedAt:
+          type: string
+          format: date-time
+    BreachPrediction:
+      type: object
+      required: [id, useCaseId, predictedBreachType, status]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        predictedBreachType:
+          type: string
+          enum: [appetite, fairness, operational_handoff, portfolio_mix]
+        probability:
+          type: number
+          format: float
+        predictedBy:
+          type: string
+          format: date-time
+        leadingIndicators:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [open, actioned, realised, dismissed]
+    Issue:
+      type: object
+      required: [id, useCaseId, title, status]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [open, remediating, closed]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        openedAt:
+          type: string
+          format: date-time
+    IssueCreate:
+      type: object
+      required: [useCaseId, title]
+      properties:
+        useCaseId:
+          type: string
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        detail:
+          type: string
+    AlgorithmVariation:
+      type: object
+      required: [id, useCaseId, changedBy, changedAt]
+      properties:
+        id:
+          type: string
+        useCaseId:
+          type: string
+        changeSummary:
+          type: string
+        versionFrom:
+          type: string
+        versionTo:
+          type: string
+        changedBy:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        reassessmentTriggered:
+          type: boolean
+    AlgorithmVariationCreate:
+      type: object
+      required: [changeSummary, versionTo]
+      properties:
+        changeSummary:
+          type: string
+        versionFrom:
+          type: string
+        versionTo:
+          type: string
+        reassessmentTriggered:
+          type: boolean
+          default: true
+    BoardSnapshot:
+      type: object
+      required: [id, asOf]
+      properties:
+        id:
+          type: string
+        asOf:
+          type: string
+          format: date-time
+        productionUseCaseCount:
+          type: integer
+        withinAppetiteCount:
+          type: integer
+        openPredictions:
+          type: integer
+        killSwitchesOverdueDrill:
+          type: integer
+        packUri:
+          type: string
+          format: uri
+    SupervisoryExport:
+      type: object
+      required: [id, createdAt]
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        examinationReference:
+          type: string
+        includedUseCaseCount:
+          type: integer
+        exportUri:
+          type: string
+          format: uri
+    DataEnvelopeAiUseCase:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AiUseCase"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAppetiteCriteria:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AppetiteCriteria"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAppetiteBinding:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AppetiteBinding"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeFairnessPolicy:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/FairnessPolicy"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeFairnessAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/FairnessAssessment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeRiskIdentification:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RiskIdentification"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeRiskAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RiskAssessment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAiControlTest:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AiControlTest"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeKillSwitch:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/KillSwitch"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeKillSwitchDrill:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/KillSwitchDrill"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeMonitoringMetric:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/MonitoringMetric"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeComplaintSignal:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ComplaintSignal"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDataShiftSignal:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DataShiftSignal"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeBreachPrediction:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BreachPrediction"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeIssue:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Issue"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAlgorithmVariation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AlgorithmVariation"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeBoardSnapshot:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/BoardSnapshot"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeSupervisoryExport:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/SupervisoryExport"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAiUseCase:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AiUseCase"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAppetiteBinding:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AppetiteBinding"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeFairnessAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FairnessAssessment"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeRiskAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/RiskAssessment"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAiControlTest:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AiControlTest"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeHandToHumanRule:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/HandToHumanRule"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeMonitoringMetric:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/MonitoringMetric"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeBreachPrediction:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/BreachPrediction"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeIssue:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Issue"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeAlgorithmVariation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/AlgorithmVariation"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
