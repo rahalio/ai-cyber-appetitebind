@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #e8eef6;
+  --color-ground: #0a1220;
+  --color-panel: #121c2e;
+  --color-rule: #2a3a52;
+  --color-bind: #3fa6a0;
+  --color-bind-dim: #1f5c58;
+  --color-predict: #c47a3a;
+  --color-breach: #d14b4b;
+  --color-learn: #7b8fd4;
+  --color-steel: #8f9bb0;
+  --color-brand: #a8c4c2;
+  --font-display: 'Source Sans 3', sans-serif;
+  --font-mono: 'Source Code Pro', monospace;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(31, 92, 88, 0.18), transparent 50%),
+    linear-gradient(180deg, #0a1220 0%, #0d1626 100%);
+  color: var(--color-ink);
+}
+
+.limit-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    rgba(42, 58, 82, 0.35) 28px
+  );
+}
+
+@keyframes learn-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.learn-pulse {
+  animation: learn-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-pulse {
+    animation: none;
+  }
+}

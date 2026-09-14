@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: Appetite API
+  version: 0.1.0
+  description: |
+    Firm appetite criteria and per-use-case binding decisions (BR-1).
+  x-domain: apt
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: Appetite
+    description: Appetite criteria and binding decisions
+paths:
+  /v1/appetite-criteria:
+    get:
+      operationId: getAppetiteCriteria
+      tags: [Appetite]
+      summary: Get firm appetite criteria
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AppetiteCriteria
+      responses:
+        '200':
+          description: Standard assessment criteria applied to all AI use cases
+          content:
+            application/json:
+              schema:
+                $ref: ./appetite.schemas.yaml#/components/schemas/AppetiteCriteriaResponse
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    put:
+      operationId: updateAppetiteCriteria
+      tags: [Appetite]
+      summary: Update firm appetite criteria
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AppetiteCriteria
+      x-dynamodb:
+        entityType: "APPETITE_CRITERIA"
+        pkPatternTemplate: "APPETITE_CRITERIA#${criteriaId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./appetite.schemas.yaml#/components/schemas/AppetiteCriteria
+      responses:
+        '200':
+          description: Criteria updated
+          content:
+            application/json:
+              schema:
+                $ref: ./appetite.schemas.yaml#/components/schemas/AppetiteCriteriaResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/appetite-bindings:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./appetite.schemas.yaml#/components/schemas/UseCaseId
+    get:
+      operationId: listAppetiteBindings
+      tags: [Appetite]
+      summary: List appetite bindings for a use case
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AppetiteBinding
+      responses:
+        '200':
+          description: Appetite binding history
+          content:
+            application/json:
+              schema:
+                $ref: ./appetite.schemas.yaml#/components/schemas/AppetiteBindingListResponse
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: bindUseCaseToAppetite
+      tags: [Appetite]
+      summary: Bind use case to appetite
+      description: >
+        Record appetite-binding decision. Production traffic must not be enabled
+        without a current binding that permits go-live.
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AppetiteBinding
+      x-dynamodb:
+        entityType: "APPETITE_BINDING"
+        pkPatternTemplate: "APPETITE_BINDING#${bindingId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "APPETITE_BINDING#${bindingId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./appetite.schemas.yaml#/components/schemas/AppetiteBindingCreate
+      responses:
+        '201':
+          description: Binding recorded
+          content:
+            application/json:
+              schema:
+                $ref: ./appetite.schemas.yaml#/components/schemas/AppetiteBindingResponse
+        '409':
+          $ref: ./common/responses.yaml#/components/responses/Conflict
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

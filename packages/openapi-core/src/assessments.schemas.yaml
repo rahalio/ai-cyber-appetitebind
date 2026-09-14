@@ -1,0 +1,206 @@
+openapi: 3.1.0
+info:
+  title: Assessments schemas
+  version: 0.1.0
+  description: Risk identification, assessment workspace, and three-lines sign-off.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+    AssessmentId:
+      type: string
+      pattern: '^asm_[0-9A-HJKMNP-TV-Z]{26}$'
+    RiskIdentificationId:
+      type: string
+      pattern: '^rid_[0-9A-HJKMNP-TV-Z]{26}$'
+
+    ReferenceComparison:
+      type: object
+      required: [referenceType, varianceSummary]
+      properties:
+        referenceType:
+          type: string
+          enum: [non_ai_model, rules_engine, prior_version]
+        varianceSummary:
+          type: string
+        materialVariance:
+          type: boolean
+        rationale:
+          type: string
+        decisionDriversReviewed:
+          type: array
+          items:
+            type: string
+
+    ThreeLinesSignOff:
+      type: object
+      required: [line, roleId, decision]
+      properties:
+        line:
+          type: string
+          enum: [first, second, third]
+        roleId:
+          type: string
+        decision:
+          type: string
+          enum: [approve, conditional, reject]
+        comments:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+
+    RiskIdentification:
+      type: object
+
+      x-dynamodb:
+        entityType: "RISK_IDENTIFICATION"
+        pkPatternTemplate: "RISK_IDENTIFICATION#${riskIdentificationId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "RISK_IDENTIFICATION#${riskIdentificationId}"
+      required: [riskIdentificationId, useCaseId, trigger, identifiedAt, createdAt, updatedAt]
+      properties:
+        riskIdentificationId:
+          $ref: '#/components/schemas/RiskIdentificationId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        trigger:
+          type: string
+          enum: [use_expansion, data_change, driver_drift, regulatory_change, periodic]
+        description:
+          type: string
+        reassessmentRequired:
+          type: boolean
+        identifiedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RiskIdentificationCreate:
+      type: object
+      required: [trigger]
+      properties:
+        trigger:
+          type: string
+          enum: [use_expansion, data_change, driver_drift, regulatory_change, periodic]
+        description:
+          type: string
+        reassessmentRequired:
+          type: boolean
+          default: true
+
+    RiskAssessment:
+      type: object
+
+      x-dynamodb:
+        entityType: "RISK_ASSESSMENT"
+        pkPatternTemplate: "RISK_ASSESSMENT#${assessmentId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "RISK_ASSESSMENT#${assessmentId}"
+      required: [assessmentId, useCaseId, status, createdAt, updatedAt]
+      properties:
+        assessmentId:
+          $ref: '#/components/schemas/AssessmentId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        status:
+          type: string
+          enum: [draft, in_review, signed_off, rejected]
+        technicalParameters:
+          type: object
+          additionalProperties:
+            type: string
+        businessParameters:
+          type: object
+          additionalProperties:
+            type: string
+        operationalParameters:
+          type: object
+          additionalProperties:
+            type: string
+        referenceComparison:
+          $ref: '#/components/schemas/ReferenceComparison'
+        signOffs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreeLinesSignOff'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RiskAssessmentCreate:
+      type: object
+      required: [useCaseId]
+      properties:
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        technicalParameters:
+          type: object
+          additionalProperties:
+            type: string
+        businessParameters:
+          type: object
+          additionalProperties:
+            type: string
+        operationalParameters:
+          type: object
+          additionalProperties:
+            type: string
+
+    RiskAssessmentListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskAssessment'
+        nextCursor:
+          type: string
+
+    RiskIdentificationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/RiskIdentification'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    RiskAssessmentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/RiskAssessment'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    RiskAssessmentListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/RiskAssessmentListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

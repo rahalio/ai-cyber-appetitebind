@@ -1,0 +1,37 @@
+{
+  "name": "ai-cyber-appetitebind",
+  "version": "0.1.0",
+  "description": "Appetitebind — AI risk-appetite RMF OS (OpenAPI-first DDD)",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:openapi": "pnpm --filter @appetitebind/openapi-core lint:domains",
+    "bundle:openapi": "pnpm --filter @appetitebind/openapi-core bundle:domains",
+    "build": "pnpm --filter @appetitebind/core build && pnpm --filter @appetitebind/services build && pnpm --filter @appetitebind/adapters build && pnpm --filter @appetitebind/api-server build",
+    "dev:api": "pnpm --filter @appetitebind/api-server dev",
+    "dev:web": "pnpm --filter @appetitebind/webapp dev",
+    "codegen:core": "node scripts/sync-codegen-paths.mjs && PYTHONPATH=.codegen/codegen/src python3 -m zero_codegen.cli.main generate --all --layers core --config .codegen/.zero-codegen-merged.json --skip-build",
+    "codegen:identity": "node scripts/sync-codegen-paths.mjs && PYTHONPATH=.codegen/codegen/src python3 -m zero_codegen.cli.main generate --domain identity --config .codegen/.zero-codegen-merged.json --skip-build",
+    "codegen:webapp": "node scripts/sync-codegen-paths.mjs && PYTHONPATH=.codegen/codegen/src python3 -m zero_codegen.cli.main generate --domain usecases --domain appetite --domain fairness --domain assessments --domain controls --domain monitoring --domain predictions --domain governance --layers webapp --config .codegen/.zero-codegen-merged.json --skip-build --no-fail-fast --no-clean",
+    "codegen:paths": "node scripts/sync-codegen-paths.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.55.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "core-js"
+    ]
+  }
+}

@@ -1,0 +1,161 @@
+openapi: 3.1.0
+info:
+  title: Fairness schemas
+  version: 0.1.0
+  description: Fairness policy and case assessments.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+    FairnessAssessmentId:
+      type: string
+      pattern: '^fas_[0-9A-HJKMNP-TV-Z]{26}$'
+    FairnessPolicyId:
+      type: string
+      pattern: '^fpl_[0-9A-HJKMNP-TV-Z]{26}$'
+
+    FairnessThreshold:
+      type: object
+      required: [metric, limit]
+      properties:
+        metric:
+          type: string
+        limit:
+          type: number
+          format: float
+        segment:
+          type: string
+
+    FairnessPolicy:
+      type: object
+
+      x-dynamodb:
+        entityType: "FAIRNESS_POLICY"
+        pkPatternTemplate: "FAIRNESS_POLICY#${fairnessPolicyId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      required: [fairnessPolicyId, version, thresholds, createdAt, updatedAt]
+      properties:
+        fairnessPolicyId:
+          $ref: '#/components/schemas/FairnessPolicyId'
+        version:
+          type: string
+        narrative:
+          type: string
+        thresholds:
+          type: array
+          items:
+            $ref: '#/components/schemas/FairnessThreshold'
+        approvedBy:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FairnessAssessment:
+      type: object
+
+      x-dynamodb:
+        entityType: "FAIRNESS_ASSESSMENT"
+        pkPatternTemplate: "FAIRNESS_ASSESSMENT#${fairnessAssessmentId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "FAIRNESS_ASSESSMENT#${fairnessAssessmentId}"
+      required: [fairnessAssessmentId, useCaseId, outcome, createdAt, updatedAt]
+      properties:
+        fairnessAssessmentId:
+          $ref: '#/components/schemas/FairnessAssessmentId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        outcome:
+          type: string
+          enum: [pass, conditional, fail]
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+        vulnerableCustomerConsidered:
+          type: boolean
+        assessedBy:
+          type: string
+        assessedAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FairnessAssessmentCreate:
+      type: object
+      required: [outcome, metrics]
+      properties:
+        outcome:
+          type: string
+          enum: [pass, conditional, fail]
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+        vulnerableCustomerConsidered:
+          type: boolean
+          default: true
+        notes:
+          type: string
+
+    FairnessAssessmentListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FairnessAssessment'
+        nextCursor:
+          type: string
+
+    FairnessPolicyResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/FairnessPolicy'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    FairnessAssessmentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/FairnessAssessment'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    FairnessAssessmentListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/FairnessAssessmentListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

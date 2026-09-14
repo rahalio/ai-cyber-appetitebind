@@ -1,0 +1,210 @@
+openapi: 3.1.0
+info:
+  title: Governance API
+  version: 0.1.0
+  description: |
+    Issues, algorithm variations, board snapshots, and supervisory exports (BR-10, BR-11).
+  x-domain: gov
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: Governance
+    description: Issues, variations, three-lines evidence, and packs
+paths:
+  /v1/issues:
+    get:
+      operationId: listIssues
+      tags: [Governance]
+      summary: List issues
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: Issue
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: useCaseId
+          in: query
+          schema:
+            $ref: ./governance.schemas.yaml#/components/schemas/UseCaseId
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, remediating, closed]
+      responses:
+        '200':
+          description: Issues page
+          content:
+            application/json:
+              schema:
+                $ref: ./governance.schemas.yaml#/components/schemas/IssueListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: openIssue
+      tags: [Governance]
+      summary: Open an issue
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: Issue
+      x-dynamodb:
+        entityType: "ISSUE"
+        pkPatternTemplate: "ISSUE#${issueId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "ISSUE#${issueId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./governance.schemas.yaml#/components/schemas/IssueCreate
+      responses:
+        '201':
+          description: Issue opened to auditable standard
+          content:
+            application/json:
+              schema:
+                $ref: ./governance.schemas.yaml#/components/schemas/IssueResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/variations:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./governance.schemas.yaml#/components/schemas/UseCaseId
+    get:
+      operationId: listAlgorithmVariations
+      tags: [Governance]
+      summary: List algorithm variations
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AlgorithmVariation
+      responses:
+        '200':
+          description: Algorithm variation history
+          content:
+            application/json:
+              schema:
+                $ref: ./governance.schemas.yaml#/components/schemas/AlgorithmVariationListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: recordAlgorithmVariation
+      tags: [Governance]
+      summary: Record algorithm variation
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AlgorithmVariation
+      x-dynamodb:
+        entityType: "ALGORITHM_VARIATION"
+        pkPatternTemplate: "ALGORITHM_VARIATION#${variationId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "ALGORITHM_VARIATION#${variationId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./governance.schemas.yaml#/components/schemas/AlgorithmVariationCreate
+      responses:
+        '201':
+          description: Variation recorded
+          content:
+            application/json:
+              schema:
+                $ref: ./governance.schemas.yaml#/components/schemas/AlgorithmVariationResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/board-snapshots:
+    post:
+      operationId: publishBoardSnapshot
+      tags: [Governance]
+      summary: Publish board residual-risk snapshot
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: BoardSnapshot
+      x-dynamodb:
+        entityType: "BOARD_SNAPSHOT"
+        pkPatternTemplate: "BOARD_SNAPSHOT#${boardSnapshotId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./governance.schemas.yaml#/components/schemas/PublishBoardSnapshotRequest
+      responses:
+        '201':
+          description: Board snapshot with residual AI risk trajectory
+          content:
+            application/json:
+              schema:
+                $ref: ./governance.schemas.yaml#/components/schemas/BoardSnapshotResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/supervisory-exports:
+    post:
+      operationId: createSupervisoryExport
+      tags: [Governance]
+      summary: Create supervisory evidence pack
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: SupervisoryExport
+      x-dynamodb:
+        entityType: "SUPERVISORY_EXPORT"
+        pkPatternTemplate: "SUPERVISORY_EXPORT#${supervisoryExportId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./governance.schemas.yaml#/components/schemas/CreateSupervisoryExportRequest
+      responses:
+        '201':
+          description: Supervisory pack export created
+          content:
+            application/json:
+              schema:
+                $ref: ./governance.schemas.yaml#/components/schemas/SupervisoryExportResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

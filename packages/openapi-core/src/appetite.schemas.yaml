@@ -1,0 +1,170 @@
+openapi: 3.1.0
+info:
+  title: Appetite schemas
+  version: 0.1.0
+  description: Appetite criteria and binding decisions.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+    BindingId:
+      type: string
+      pattern: '^bnd_[0-9A-HJKMNP-TV-Z]{26}$'
+    CriteriaId:
+      type: string
+      pattern: '^acr_[0-9A-HJKMNP-TV-Z]{26}$'
+
+    AppetiteCriteriaQuestion:
+      type: object
+      required: [id, prompt]
+      properties:
+        id:
+          type: string
+        prompt:
+          type: string
+        weight:
+          type: number
+          format: float
+
+    AppetiteCriteria:
+      type: object
+
+      x-dynamodb:
+        entityType: "APPETITE_CRITERIA"
+        pkPatternTemplate: "APPETITE_CRITERIA#${criteriaId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      required: [criteriaId, version, questions, createdAt, updatedAt]
+      properties:
+        criteriaId:
+          $ref: '#/components/schemas/CriteriaId'
+        version:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppetiteCriteriaQuestion'
+        approvedBy:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AppetiteBinding:
+      type: object
+
+      x-dynamodb:
+        entityType: "APPETITE_BINDING"
+        pkPatternTemplate: "APPETITE_BINDING#${bindingId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "APPETITE_BINDING#${bindingId}" 
+      required: [bindingId, useCaseId, decision, boundAt, createdAt, updatedAt]
+      properties:
+        bindingId:
+          $ref: '#/components/schemas/BindingId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        decision:
+          type: string
+          enum: [within_appetite, conditional, outside_appetite]
+        answers:
+          type: object
+          additionalProperties:
+            type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        residualRiskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        boundBy:
+          type: string
+        boundAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AppetiteBindingCreate:
+      type: object
+      required: [decision, answers]
+      properties:
+        decision:
+          type: string
+          enum: [within_appetite, conditional, outside_appetite]
+        answers:
+          type: object
+          additionalProperties:
+            type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        residualRiskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        expiresAt:
+          type: string
+          format: date-time
+
+    AppetiteBindingListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppetiteBinding'
+        nextCursor:
+          type: string
+
+    AppetiteCriteriaResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AppetiteCriteria'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AppetiteBindingResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AppetiteBinding'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AppetiteBindingListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AppetiteBindingListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

@@ -1,0 +1,196 @@
+openapi: 3.1.0
+info:
+  title: Monitoring schemas
+  version: 0.1.0
+  description: Technical, business, operational, complaint, and data-shift signals.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+    MetricId:
+      type: string
+      pattern: '^mtr_[0-9A-HJKMNP-TV-Z]{26}$'
+    ComplaintSignalId:
+      type: string
+      pattern: '^cmp_[0-9A-HJKMNP-TV-Z]{26}$'
+    DataShiftSignalId:
+      type: string
+      pattern: '^dst_[0-9A-HJKMNP-TV-Z]{26}$'
+
+    MonitoringMetric:
+      type: object
+
+      x-dynamodb:
+        entityType: "MONITORING_METRIC"
+        pkPatternTemplate: "MONITORING_METRIC#${metricId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "MONITORING_METRIC#${metricId}"
+      required: [metricId, useCaseId, category, name, value, createdAt, updatedAt]
+      properties:
+        metricId:
+          $ref: '#/components/schemas/MetricId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        category:
+          type: string
+          enum: [technical, business, operational, complaint, data_shift]
+        name:
+          type: string
+        value:
+          type: number
+          format: float
+        threshold:
+          type: number
+          format: float
+        observedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MonitoringMetricIngest:
+      type: object
+      required: [useCaseId, category, name, value]
+      properties:
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        category:
+          type: string
+          enum: [technical, business, operational, complaint, data_shift]
+        name:
+          type: string
+        value:
+          type: number
+          format: float
+        threshold:
+          type: number
+          format: float
+        observedAt:
+          type: string
+          format: date-time
+
+    ComplaintSignal:
+      type: object
+
+      x-dynamodb:
+        entityType: "COMPLAINT_SIGNAL"
+        pkPatternTemplate: "COMPLAINT_SIGNAL#${complaintSignalId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "COMPLAINT_SIGNAL#${complaintSignalId}"
+      required: [complaintSignalId, useCaseId, taxonomy, createdAt, updatedAt]
+      properties:
+        complaintSignalId:
+          $ref: '#/components/schemas/ComplaintSignalId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        taxonomy:
+          type: string
+          enum: [discrimination, unfair_outcome, explainability, other_conduct]
+        externalComplaintId:
+          type: string
+        receivedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DataShiftSignal:
+      type: object
+
+      x-dynamodb:
+        entityType: "DATA_SHIFT_SIGNAL"
+        pkPatternTemplate: "DATA_SHIFT_SIGNAL#${dataShiftSignalId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "DATA_SHIFT_SIGNAL#${dataShiftSignalId}"
+      required: [dataShiftSignalId, useCaseId, featureOrSegment, shiftMagnitude, createdAt, updatedAt]
+      properties:
+        dataShiftSignalId:
+          $ref: '#/components/schemas/DataShiftSignalId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        featureOrSegment:
+          type: string
+        shiftMagnitude:
+          type: number
+          format: float
+        detectedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MonitoringMetricListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonitoringMetric'
+        nextCursor:
+          type: string
+
+    MonitoringMetricResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/MonitoringMetric'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    MonitoringMetricListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/MonitoringMetricListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    ComplaintSignalResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ComplaintSignal'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    DataShiftSignalResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DataShiftSignal'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

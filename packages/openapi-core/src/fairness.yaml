@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: Fairness API
+  version: 0.1.0
+  description: |
+    Firm fairness policy and per-use-case assessments (BR-2).
+  x-domain: frn
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: Fairness
+    description: Fairness policy and case assessments
+paths:
+  /v1/fairness-policy:
+    get:
+      operationId: getFairnessPolicy
+      tags: [Fairness]
+      summary: Get firm fairness policy
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: FairnessPolicy
+      responses:
+        '200':
+          description: Firm fairness policy with measurable thresholds
+          content:
+            application/json:
+              schema:
+                $ref: ./fairness.schemas.yaml#/components/schemas/FairnessPolicyResponse
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    put:
+      operationId: updateFairnessPolicy
+      tags: [Fairness]
+      summary: Update firm fairness policy
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: FairnessPolicy
+      x-dynamodb:
+        entityType: "FAIRNESS_POLICY"
+        pkPatternTemplate: "FAIRNESS_POLICY#${fairnessPolicyId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./fairness.schemas.yaml#/components/schemas/FairnessPolicy
+      responses:
+        '200':
+          description: Fairness policy updated
+          content:
+            application/json:
+              schema:
+                $ref: ./fairness.schemas.yaml#/components/schemas/FairnessPolicyResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/fairness-assessments:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./fairness.schemas.yaml#/components/schemas/UseCaseId
+    get:
+      operationId: listFairnessAssessments
+      tags: [Fairness]
+      summary: List fairness assessments
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: FairnessAssessment
+      responses:
+        '200':
+          description: Fairness assessments for the use case
+          content:
+            application/json:
+              schema:
+                $ref: ./fairness.schemas.yaml#/components/schemas/FairnessAssessmentListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createFairnessAssessment
+      tags: [Fairness]
+      summary: Create fairness assessment
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: FairnessAssessment
+      x-dynamodb:
+        entityType: "FAIRNESS_ASSESSMENT"
+        pkPatternTemplate: "FAIRNESS_ASSESSMENT#${fairnessAssessmentId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "FAIRNESS_ASSESSMENT#${fairnessAssessmentId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./fairness.schemas.yaml#/components/schemas/FairnessAssessmentCreate
+      responses:
+        '201':
+          description: Fairness assessment recorded
+          content:
+            application/json:
+              schema:
+                $ref: ./fairness.schemas.yaml#/components/schemas/FairnessAssessmentResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

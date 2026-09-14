@@ -1,0 +1,293 @@
+openapi: 3.1.0
+info:
+  title: Governance schemas
+  version: 0.1.0
+  description: Issues, algorithm variations, board snapshots, and supervisory exports.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+    IssueId:
+      type: string
+      pattern: '^iss_[0-9A-HJKMNP-TV-Z]{26}$'
+    VariationId:
+      type: string
+      pattern: '^var_[0-9A-HJKMNP-TV-Z]{26}$'
+    BoardSnapshotId:
+      type: string
+      pattern: '^brd_[0-9A-HJKMNP-TV-Z]{26}$'
+    SupervisoryExportId:
+      type: string
+      pattern: '^sup_[0-9A-HJKMNP-TV-Z]{26}$'
+
+    Issue:
+      type: object
+
+      x-dynamodb:
+        entityType: "ISSUE"
+        pkPatternTemplate: "ISSUE#${issueId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "ISSUE#${issueId}"
+      required: [issueId, useCaseId, title, status, createdAt, updatedAt]
+      properties:
+        issueId:
+          $ref: '#/components/schemas/IssueId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        title:
+          type: string
+        status:
+          type: string
+          enum: [open, remediating, closed]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        detail:
+          type: string
+        openedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IssueCreate:
+      type: object
+      required: [useCaseId, title]
+      properties:
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        detail:
+          type: string
+
+    AlgorithmVariation:
+      type: object
+
+      x-dynamodb:
+        entityType: "ALGORITHM_VARIATION"
+        pkPatternTemplate: "ALGORITHM_VARIATION#${variationId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "ALGORITHM_VARIATION#${variationId}"
+      required: [variationId, useCaseId, changedBy, changedAt, createdAt, updatedAt]
+      properties:
+        variationId:
+          $ref: '#/components/schemas/VariationId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        changeSummary:
+          type: string
+        versionFrom:
+          type: string
+        versionTo:
+          type: string
+        changedBy:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        reassessmentTriggered:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AlgorithmVariationCreate:
+      type: object
+      required: [changeSummary, versionTo]
+      properties:
+        changeSummary:
+          type: string
+        versionFrom:
+          type: string
+        versionTo:
+          type: string
+        reassessmentTriggered:
+          type: boolean
+          default: true
+
+    BoardSnapshot:
+      type: object
+
+      x-dynamodb:
+        entityType: "BOARD_SNAPSHOT"
+        pkPatternTemplate: "BOARD_SNAPSHOT#${boardSnapshotId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      required: [boardSnapshotId, asOf, createdAt, updatedAt]
+      properties:
+        boardSnapshotId:
+          $ref: '#/components/schemas/BoardSnapshotId'
+        asOf:
+          type: string
+          format: date-time
+        productionUseCaseCount:
+          type: integer
+        withinAppetiteCount:
+          type: integer
+        openPredictions:
+          type: integer
+        killSwitchesOverdueDrill:
+          type: integer
+        packUri:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PublishBoardSnapshotRequest:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        includeOpenPredictions:
+          type: boolean
+          default: true
+
+    SupervisoryExport:
+      type: object
+
+      x-dynamodb:
+        entityType: "SUPERVISORY_EXPORT"
+        pkPatternTemplate: "SUPERVISORY_EXPORT#${supervisoryExportId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      required: [supervisoryExportId, createdAt, updatedAt]
+      properties:
+        supervisoryExportId:
+          $ref: '#/components/schemas/SupervisoryExportId'
+        examinationReference:
+          type: string
+        includedUseCaseCount:
+          type: integer
+        exportUri:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateSupervisoryExportRequest:
+      type: object
+      properties:
+        useCaseIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/UseCaseId'
+        includeKillSwitchDrills:
+          type: boolean
+          default: true
+        examinationReference:
+          type: string
+
+    IssueListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+        nextCursor:
+          type: string
+
+    AlgorithmVariationListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlgorithmVariation'
+        nextCursor:
+          type: string
+
+    IssueResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Issue'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    IssueListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/IssueListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AlgorithmVariationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AlgorithmVariation'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AlgorithmVariationListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AlgorithmVariationListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    BoardSnapshotResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/BoardSnapshot'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    SupervisoryExportResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/SupervisoryExport'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

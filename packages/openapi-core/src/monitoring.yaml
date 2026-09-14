@@ -1,0 +1,154 @@
+openapi: 3.1.0
+info:
+  title: Monitoring API
+  version: 0.1.0
+  description: |
+    Continuous monitoring ingest for metrics, complaints, and data-shift (BR-7).
+  x-domain: mon
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: Monitoring
+    description: Technical, business, operational, and complaint metrics
+paths:
+  /v1/monitoring/metrics:
+    get:
+      operationId: listMonitoringMetrics
+      tags: [Monitoring]
+      summary: List monitoring metrics
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: MonitoringMetric
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: useCaseId
+          in: query
+          schema:
+            $ref: ./monitoring.schemas.yaml#/components/schemas/UseCaseId
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [technical, business, operational, complaint, data_shift]
+      responses:
+        '200':
+          description: Monitoring metrics page
+          content:
+            application/json:
+              schema:
+                $ref: ./monitoring.schemas.yaml#/components/schemas/MonitoringMetricListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: ingestMonitoringMetric
+      tags: [Monitoring]
+      summary: Ingest a monitoring metric
+      security:
+        - apiKey: []
+      x-repository: MonitoringMetric
+      x-dynamodb:
+        entityType: "MONITORING_METRIC"
+        pkPatternTemplate: "MONITORING_METRIC#${metricId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "MONITORING_METRIC#${metricId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./monitoring.schemas.yaml#/components/schemas/MonitoringMetricIngest
+      responses:
+        '202':
+          description: Metric accepted
+          content:
+            application/json:
+              schema:
+                $ref: ./monitoring.schemas.yaml#/components/schemas/MonitoringMetricResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/monitoring/complaints:
+    post:
+      operationId: ingestComplaintSignal
+      tags: [Monitoring]
+      summary: Ingest a complaint signal
+      security:
+        - apiKey: []
+      x-repository: ComplaintSignal
+      x-dynamodb:
+        entityType: "COMPLAINT_SIGNAL"
+        pkPatternTemplate: "COMPLAINT_SIGNAL#${complaintSignalId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "COMPLAINT_SIGNAL#${complaintSignalId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./monitoring.schemas.yaml#/components/schemas/ComplaintSignal
+      responses:
+        '202':
+          description: Complaint signal linked to use case review
+          content:
+            application/json:
+              schema:
+                $ref: ./monitoring.schemas.yaml#/components/schemas/ComplaintSignalResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/monitoring/data-shifts:
+    post:
+      operationId: ingestDataShiftSignal
+      tags: [Monitoring]
+      summary: Ingest a data-shift signal
+      security:
+        - apiKey: []
+      x-repository: DataShiftSignal
+      x-dynamodb:
+        entityType: "DATA_SHIFT_SIGNAL"
+        pkPatternTemplate: "DATA_SHIFT_SIGNAL#${dataShiftSignalId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "DATA_SHIFT_SIGNAL#${dataShiftSignalId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./monitoring.schemas.yaml#/components/schemas/DataShiftSignal
+      responses:
+        '202':
+          description: Data-shift signal accepted
+          content:
+            application/json:
+              schema:
+                $ref: ./monitoring.schemas.yaml#/components/schemas/DataShiftSignalResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

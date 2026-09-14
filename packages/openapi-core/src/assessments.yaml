@@ -1,0 +1,202 @@
+openapi: 3.1.0
+info:
+  title: Assessments API
+  version: 0.1.0
+  description: |
+    Continuous risk identification, assessment workspace, reference comparison, and three-lines sign-off (BR-3, BR-4, BR-12).
+  x-domain: asm
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: Assessments
+    description: Risk assessment workspace and sign-off
+paths:
+  /v1/use-cases/{useCaseId}/risk-identifications:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./assessments.schemas.yaml#/components/schemas/UseCaseId
+    post:
+      operationId: recordRiskIdentification
+      tags: [Assessments]
+      summary: Record continuous risk re-identification
+      description: >
+        Continuous identification trigger — use expansion, data change, or
+        decision-driver drift.
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: RiskIdentification
+      x-dynamodb:
+        entityType: "RISK_IDENTIFICATION"
+        pkPatternTemplate: "RISK_IDENTIFICATION#${riskIdentificationId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "RISK_IDENTIFICATION#${riskIdentificationId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./assessments.schemas.yaml#/components/schemas/RiskIdentificationCreate
+      responses:
+        '201':
+          description: Re-identification recorded; reassessment may be required
+          content:
+            application/json:
+              schema:
+                $ref: ./assessments.schemas.yaml#/components/schemas/RiskIdentificationResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/assessments:
+    get:
+      operationId: listRiskAssessments
+      tags: [Assessments]
+      summary: List risk assessments
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: RiskAssessment
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: useCaseId
+          in: query
+          schema:
+            $ref: ./assessments.schemas.yaml#/components/schemas/UseCaseId
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, in_review, signed_off, rejected]
+      responses:
+        '200':
+          description: Risk assessments page
+          content:
+            application/json:
+              schema:
+                $ref: ./assessments.schemas.yaml#/components/schemas/RiskAssessmentListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: createRiskAssessment
+      tags: [Assessments]
+      summary: Create risk assessment
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: RiskAssessment
+      x-dynamodb:
+        entityType: "RISK_ASSESSMENT"
+        pkPatternTemplate: "RISK_ASSESSMENT#${assessmentId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "RISK_ASSESSMENT#${assessmentId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./assessments.schemas.yaml#/components/schemas/RiskAssessmentCreate
+      responses:
+        '201':
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                $ref: ./assessments.schemas.yaml#/components/schemas/RiskAssessmentResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/assessments/{assessmentId}/reference-comparison:
+    parameters:
+      - name: assessmentId
+        in: path
+        required: true
+        schema:
+          $ref: ./assessments.schemas.yaml#/components/schemas/AssessmentId
+    post:
+      operationId: recordReferenceComparison
+      tags: [Assessments]
+      summary: Record reference-model comparison
+      description: Compare AI outcomes to non-AI reference model or rules.
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: RiskAssessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./assessments.schemas.yaml#/components/schemas/ReferenceComparison
+      responses:
+        '200':
+          description: Comparison attached to assessment
+          content:
+            application/json:
+              schema:
+                $ref: ./assessments.schemas.yaml#/components/schemas/RiskAssessmentResponse
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/assessments/{assessmentId}/sign-off:
+    parameters:
+      - name: assessmentId
+        in: path
+        required: true
+        schema:
+          $ref: ./assessments.schemas.yaml#/components/schemas/AssessmentId
+    post:
+      operationId: signOffRiskAssessment
+      tags: [Assessments]
+      summary: Record three-lines sign-off
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: RiskAssessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./assessments.schemas.yaml#/components/schemas/ThreeLinesSignOff
+      responses:
+        '200':
+          description: Multi-stakeholder sign-off recorded
+          content:
+            application/json:
+              schema:
+                $ref: ./assessments.schemas.yaml#/components/schemas/RiskAssessmentResponse
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

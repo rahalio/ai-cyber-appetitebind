@@ -1,0 +1,293 @@
+openapi: 3.1.0
+info:
+  title: Controls API
+  version: 0.1.0
+  description: |
+    Dynamic control tests, hand-to-human exits, and governed kill-switch (BR-5, BR-6).
+  x-domain: ctl
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: Controls
+    description: Control tests, hand-to-human, and kill-switches
+paths:
+  /v1/control-tests:
+    get:
+      operationId: listAiControlTests
+      tags: [Controls]
+      summary: List control tests
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiControlTest
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: useCaseId
+          in: query
+          schema:
+            $ref: ./controls.schemas.yaml#/components/schemas/UseCaseId
+        - name: testType
+          in: query
+          schema:
+            type: string
+            enum: [out_of_sample, stress, customer_journey, data_bias, accuracy]
+      responses:
+        '200':
+          description: Control tests page
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/AiControlTestListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: scheduleAiControlTest
+      tags: [Controls]
+      summary: Schedule a control test
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiControlTest
+      x-dynamodb:
+        entityType: "CONTROL_TEST"
+        pkPatternTemplate: "CONTROL_TEST#${testId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "CONTROL_TEST#${testId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./controls.schemas.yaml#/components/schemas/AiControlTestCreate
+      responses:
+        '201':
+          description: Control test scheduled
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/AiControlTestResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/control-tests/{testId}/evidence:
+    parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          $ref: ./controls.schemas.yaml#/components/schemas/TestId
+    post:
+      operationId: submitControlTestEvidence
+      tags: [Controls]
+      summary: Submit control test evidence
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiControlTest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./controls.schemas.yaml#/components/schemas/TestEvidence
+      responses:
+        '201':
+          description: Evidence captured
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/AiControlTestResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/hand-to-human-rules:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./controls.schemas.yaml#/components/schemas/UseCaseId
+    get:
+      operationId: listHandToHumanRules
+      tags: [Controls]
+      summary: List hand-to-human rules
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: HandToHumanRule
+      responses:
+        '200':
+          description: Hand-to-human rules
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/HandToHumanRuleListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    put:
+      operationId: setHandToHumanRules
+      tags: [Controls]
+      summary: Replace hand-to-human rules
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: HandToHumanRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./controls.schemas.yaml#/components/schemas/SetHandToHumanRulesRequest
+      responses:
+        '200':
+          description: Rules set
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/HandToHumanRuleListResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/kill-switch:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./controls.schemas.yaml#/components/schemas/UseCaseId
+    get:
+      operationId: getKillSwitch
+      tags: [Controls]
+      summary: Get kill-switch configuration
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: KillSwitch
+      responses:
+        '200':
+          description: Kill-switch configuration and last drill
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/KillSwitchResponse
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    put:
+      operationId: registerKillSwitch
+      tags: [Controls]
+      summary: Register or update kill-switch
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: KillSwitch
+      x-dynamodb:
+        entityType: "KILL_SWITCH"
+        pkPatternTemplate: "KILL_SWITCH#${useCaseId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./controls.schemas.yaml#/components/schemas/KillSwitch
+      responses:
+        '200':
+          description: Kill-switch registered
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/KillSwitchResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/kill-switch/drill:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./controls.schemas.yaml#/components/schemas/UseCaseId
+    post:
+      operationId: drillKillSwitch
+      tags: [Controls]
+      summary: Record kill-switch drill
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: KillSwitchDrill
+      x-dynamodb:
+        entityType: "KILL_SWITCH_DRILL"
+        pkPatternTemplate: "KILL_SWITCH_DRILL#${killSwitchDrillId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "KILL_SWITCH_DRILL#${killSwitchDrillId}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./controls.schemas.yaml#/components/schemas/KillSwitchDrillRequest
+      responses:
+        '201':
+          description: Drill recorded
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/KillSwitchDrillResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/kill-switch/execute:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./controls.schemas.yaml#/components/schemas/UseCaseId
+    post:
+      operationId: executeKillSwitch
+      tags: [Controls]
+      summary: Execute kill-switch
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: KillSwitch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./controls.schemas.yaml#/components/schemas/KillSwitchExecuteRequest
+      responses:
+        '202':
+          description: Kill-switch execution accepted
+          content:
+            application/json:
+              schema:
+                $ref: ./controls.schemas.yaml#/components/schemas/KillSwitchResponse
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

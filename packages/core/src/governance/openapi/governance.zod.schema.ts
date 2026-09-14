@@ -1,0 +1,667 @@
+import { makeApi, Zodios, type ZodiosOptions } from '@zodios/core';
+import { z } from 'zod';
+
+const openIssue_Body = z
+  .object({
+    useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+    title: z.string(),
+    severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+    detail: z.string().optional(),
+  })
+  .passthrough();
+const recordAlgorithmVariation_Body = z
+  .object({
+    changeSummary: z.string(),
+    versionFrom: z.string().optional(),
+    versionTo: z.string(),
+    reassessmentTriggered: z.boolean().optional().default(true),
+  })
+  .passthrough();
+const publishBoardSnapshot_Body = z
+  .object({
+    asOf: z.string().datetime({ offset: true }),
+    includeOpenPredictions: z.boolean().default(true),
+  })
+  .partial()
+  .passthrough();
+const createSupervisoryExport_Body = z
+  .object({
+    useCaseIds: z.array(z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/)),
+    includeKillSwitchDrills: z.boolean().default(true),
+    examinationReference: z.string(),
+  })
+  .partial()
+  .passthrough();
+const UseCaseId = z.string();
+const Problem = z
+  .object({
+    type: z.string().url(),
+    title: z.string(),
+    status: z.number().int(),
+    detail: z.string(),
+    instance: z.string().url(),
+    code: z.string(),
+  })
+  .partial()
+  .passthrough();
+const IssueId = z.string();
+const Issue = z
+  .object({
+    issueId: z.string().regex(/^iss_[0-9A-HJKMNP-TV-Z]{26}$/),
+    useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+    title: z.string(),
+    status: z.enum(['open', 'remediating', 'closed']),
+    severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+    detail: z.string().optional(),
+    openedAt: z.string().datetime({ offset: true }).optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .passthrough();
+const IssueListData = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          issueId: z.string().regex(/^iss_[0-9A-HJKMNP-TV-Z]{26}$/),
+          useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+          title: z.string(),
+          status: z.enum(['open', 'remediating', 'closed']),
+          severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+          detail: z.string().optional(),
+          openedAt: z.string().datetime({ offset: true }).optional(),
+          createdAt: z.string().datetime({ offset: true }),
+          updatedAt: z.string().datetime({ offset: true }),
+        })
+        .passthrough()
+    ),
+    nextCursor: z.string().optional(),
+  })
+  .passthrough();
+const ResponseMeta = z
+  .object({
+    requestId: z.string().uuid(),
+    correlationId: z.string(),
+    generatedAt: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const IssueListResponse = z
+  .object({
+    data: z
+      .object({
+        items: z.array(
+          z
+            .object({
+              issueId: z.string().regex(/^iss_[0-9A-HJKMNP-TV-Z]{26}$/),
+              useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+              title: z.string(),
+              status: z.enum(['open', 'remediating', 'closed']),
+              severity: z
+                .enum(['low', 'medium', 'high', 'critical'])
+                .optional(),
+              detail: z.string().optional(),
+              openedAt: z.string().datetime({ offset: true }).optional(),
+              createdAt: z.string().datetime({ offset: true }),
+              updatedAt: z.string().datetime({ offset: true }),
+            })
+            .passthrough()
+        ),
+        nextCursor: z.string().optional(),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const IssueCreate = z
+  .object({
+    useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+    title: z.string(),
+    severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+    detail: z.string().optional(),
+  })
+  .passthrough();
+const IssueResponse = z
+  .object({
+    data: z
+      .object({
+        issueId: z.string().regex(/^iss_[0-9A-HJKMNP-TV-Z]{26}$/),
+        useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+        title: z.string(),
+        status: z.enum(['open', 'remediating', 'closed']),
+        severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+        detail: z.string().optional(),
+        openedAt: z.string().datetime({ offset: true }).optional(),
+        createdAt: z.string().datetime({ offset: true }),
+        updatedAt: z.string().datetime({ offset: true }),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const VariationId = z.string();
+const AlgorithmVariation = z
+  .object({
+    variationId: z.string().regex(/^var_[0-9A-HJKMNP-TV-Z]{26}$/),
+    useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+    changeSummary: z.string().optional(),
+    versionFrom: z.string().optional(),
+    versionTo: z.string().optional(),
+    changedBy: z.string(),
+    changedAt: z.string().datetime({ offset: true }),
+    reassessmentTriggered: z.boolean().optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .passthrough();
+const AlgorithmVariationListData = z
+  .object({
+    items: z.array(
+      z
+        .object({
+          variationId: z.string().regex(/^var_[0-9A-HJKMNP-TV-Z]{26}$/),
+          useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+          changeSummary: z.string().optional(),
+          versionFrom: z.string().optional(),
+          versionTo: z.string().optional(),
+          changedBy: z.string(),
+          changedAt: z.string().datetime({ offset: true }),
+          reassessmentTriggered: z.boolean().optional(),
+          createdAt: z.string().datetime({ offset: true }),
+          updatedAt: z.string().datetime({ offset: true }),
+        })
+        .passthrough()
+    ),
+    nextCursor: z.string().optional(),
+  })
+  .passthrough();
+const AlgorithmVariationListResponse = z
+  .object({
+    data: z
+      .object({
+        items: z.array(
+          z
+            .object({
+              variationId: z.string().regex(/^var_[0-9A-HJKMNP-TV-Z]{26}$/),
+              useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+              changeSummary: z.string().optional(),
+              versionFrom: z.string().optional(),
+              versionTo: z.string().optional(),
+              changedBy: z.string(),
+              changedAt: z.string().datetime({ offset: true }),
+              reassessmentTriggered: z.boolean().optional(),
+              createdAt: z.string().datetime({ offset: true }),
+              updatedAt: z.string().datetime({ offset: true }),
+            })
+            .passthrough()
+        ),
+        nextCursor: z.string().optional(),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const AlgorithmVariationCreate = z
+  .object({
+    changeSummary: z.string(),
+    versionFrom: z.string().optional(),
+    versionTo: z.string(),
+    reassessmentTriggered: z.boolean().optional().default(true),
+  })
+  .passthrough();
+const AlgorithmVariationResponse = z
+  .object({
+    data: z
+      .object({
+        variationId: z.string().regex(/^var_[0-9A-HJKMNP-TV-Z]{26}$/),
+        useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+        changeSummary: z.string().optional(),
+        versionFrom: z.string().optional(),
+        versionTo: z.string().optional(),
+        changedBy: z.string(),
+        changedAt: z.string().datetime({ offset: true }),
+        reassessmentTriggered: z.boolean().optional(),
+        createdAt: z.string().datetime({ offset: true }),
+        updatedAt: z.string().datetime({ offset: true }),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const PublishBoardSnapshotRequest = z
+  .object({
+    asOf: z.string().datetime({ offset: true }),
+    includeOpenPredictions: z.boolean().default(true),
+  })
+  .partial()
+  .passthrough();
+const BoardSnapshotId = z.string();
+const BoardSnapshot = z
+  .object({
+    boardSnapshotId: z.string().regex(/^brd_[0-9A-HJKMNP-TV-Z]{26}$/),
+    asOf: z.string().datetime({ offset: true }),
+    productionUseCaseCount: z.number().int().optional(),
+    withinAppetiteCount: z.number().int().optional(),
+    openPredictions: z.number().int().optional(),
+    killSwitchesOverdueDrill: z.number().int().optional(),
+    packUri: z.string().url().optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .passthrough();
+const BoardSnapshotResponse = z
+  .object({
+    data: z
+      .object({
+        boardSnapshotId: z.string().regex(/^brd_[0-9A-HJKMNP-TV-Z]{26}$/),
+        asOf: z.string().datetime({ offset: true }),
+        productionUseCaseCount: z.number().int().optional(),
+        withinAppetiteCount: z.number().int().optional(),
+        openPredictions: z.number().int().optional(),
+        killSwitchesOverdueDrill: z.number().int().optional(),
+        packUri: z.string().url().optional(),
+        createdAt: z.string().datetime({ offset: true }),
+        updatedAt: z.string().datetime({ offset: true }),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+const CreateSupervisoryExportRequest = z
+  .object({
+    useCaseIds: z.array(z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/)),
+    includeKillSwitchDrills: z.boolean().default(true),
+    examinationReference: z.string(),
+  })
+  .partial()
+  .passthrough();
+const SupervisoryExportId = z.string();
+const SupervisoryExport = z
+  .object({
+    supervisoryExportId: z.string().regex(/^sup_[0-9A-HJKMNP-TV-Z]{26}$/),
+    examinationReference: z.string().optional(),
+    includedUseCaseCount: z.number().int().optional(),
+    exportUri: z.string().url().optional(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .passthrough();
+const SupervisoryExportResponse = z
+  .object({
+    data: z
+      .object({
+        supervisoryExportId: z.string().regex(/^sup_[0-9A-HJKMNP-TV-Z]{26}$/),
+        examinationReference: z.string().optional(),
+        includedUseCaseCount: z.number().int().optional(),
+        exportUri: z.string().url().optional(),
+        createdAt: z.string().datetime({ offset: true }),
+        updatedAt: z.string().datetime({ offset: true }),
+      })
+      .passthrough(),
+    meta: z
+      .object({
+        requestId: z.string().uuid(),
+        correlationId: z.string(),
+        generatedAt: z.string().datetime({ offset: true }),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
+export const schemas: any = {
+  openIssue_Body,
+  recordAlgorithmVariation_Body,
+  publishBoardSnapshot_Body,
+  createSupervisoryExport_Body,
+  UseCaseId,
+  Problem,
+  IssueId,
+  Issue,
+  IssueListData,
+  ResponseMeta,
+  IssueListResponse,
+  IssueCreate,
+  IssueResponse,
+  VariationId,
+  AlgorithmVariation,
+  AlgorithmVariationListData,
+  AlgorithmVariationListResponse,
+  AlgorithmVariationCreate,
+  AlgorithmVariationResponse,
+  PublishBoardSnapshotRequest,
+  BoardSnapshotId,
+  BoardSnapshot,
+  BoardSnapshotResponse,
+  CreateSupervisoryExportRequest,
+  SupervisoryExportId,
+  SupervisoryExport,
+  SupervisoryExportResponse,
+};
+
+const endpoints = makeApi([
+  {
+    method: 'post',
+    path: '/v1/board-snapshots',
+    alias: 'publishBoardSnapshot',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: publishBoardSnapshot_Body,
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            boardSnapshotId: z.string().regex(/^brd_[0-9A-HJKMNP-TV-Z]{26}$/),
+            asOf: z.string().datetime({ offset: true }),
+            productionUseCaseCount: z.number().int().optional(),
+            withinAppetiteCount: z.number().int().optional(),
+            openPredictions: z.number().int().optional(),
+            killSwitchesOverdueDrill: z.number().int().optional(),
+            packUri: z.string().url().optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+  },
+  {
+    method: 'get',
+    path: '/v1/issues',
+    alias: 'listIssues',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'cursor',
+        type: 'Query',
+        schema: z.string().optional(),
+      },
+      {
+        name: 'limit',
+        type: 'Query',
+        schema: z.number().int().gte(1).lte(200).optional().default(50),
+      },
+      {
+        name: 'useCaseId',
+        type: 'Query',
+        schema: z
+          .string()
+          .regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/)
+          .optional(),
+      },
+      {
+        name: 'status',
+        type: 'Query',
+        schema: z.enum(['open', 'remediating', 'closed']).optional(),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            items: z.array(
+              z
+                .object({
+                  issueId: z.string().regex(/^iss_[0-9A-HJKMNP-TV-Z]{26}$/),
+                  useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+                  title: z.string(),
+                  status: z.enum(['open', 'remediating', 'closed']),
+                  severity: z
+                    .enum(['low', 'medium', 'high', 'critical'])
+                    .optional(),
+                  detail: z.string().optional(),
+                  openedAt: z.string().datetime({ offset: true }).optional(),
+                  createdAt: z.string().datetime({ offset: true }),
+                  updatedAt: z.string().datetime({ offset: true }),
+                })
+                .passthrough()
+            ),
+            nextCursor: z.string().optional(),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+  },
+  {
+    method: 'post',
+    path: '/v1/issues',
+    alias: 'openIssue',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: openIssue_Body,
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            issueId: z.string().regex(/^iss_[0-9A-HJKMNP-TV-Z]{26}$/),
+            useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+            title: z.string(),
+            status: z.enum(['open', 'remediating', 'closed']),
+            severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+            detail: z.string().optional(),
+            openedAt: z.string().datetime({ offset: true }).optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+  },
+  {
+    method: 'post',
+    path: '/v1/supervisory-exports',
+    alias: 'createSupervisoryExport',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: createSupervisoryExport_Body,
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            supervisoryExportId: z
+              .string()
+              .regex(/^sup_[0-9A-HJKMNP-TV-Z]{26}$/),
+            examinationReference: z.string().optional(),
+            includedUseCaseCount: z.number().int().optional(),
+            exportUri: z.string().url().optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+  },
+  {
+    method: 'get',
+    path: '/v1/use-cases/:useCaseId/variations',
+    alias: 'listAlgorithmVariations',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'useCaseId',
+        type: 'Path',
+        schema: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            items: z.array(
+              z
+                .object({
+                  variationId: z.string().regex(/^var_[0-9A-HJKMNP-TV-Z]{26}$/),
+                  useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+                  changeSummary: z.string().optional(),
+                  versionFrom: z.string().optional(),
+                  versionTo: z.string().optional(),
+                  changedBy: z.string(),
+                  changedAt: z.string().datetime({ offset: true }),
+                  reassessmentTriggered: z.boolean().optional(),
+                  createdAt: z.string().datetime({ offset: true }),
+                  updatedAt: z.string().datetime({ offset: true }),
+                })
+                .passthrough()
+            ),
+            nextCursor: z.string().optional(),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+  },
+  {
+    method: 'post',
+    path: '/v1/use-cases/:useCaseId/variations',
+    alias: 'recordAlgorithmVariation',
+    requestFormat: 'json',
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: recordAlgorithmVariation_Body,
+      },
+      {
+        name: 'useCaseId',
+        type: 'Path',
+        schema: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+      },
+    ],
+    response: z
+      .object({
+        data: z
+          .object({
+            variationId: z.string().regex(/^var_[0-9A-HJKMNP-TV-Z]{26}$/),
+            useCaseId: z.string().regex(/^ucs_[0-9A-HJKMNP-TV-Z]{26}$/),
+            changeSummary: z.string().optional(),
+            versionFrom: z.string().optional(),
+            versionTo: z.string().optional(),
+            changedBy: z.string(),
+            changedAt: z.string().datetime({ offset: true }),
+            reassessmentTriggered: z.boolean().optional(),
+            createdAt: z.string().datetime({ offset: true }),
+            updatedAt: z.string().datetime({ offset: true }),
+          })
+          .passthrough(),
+        meta: z
+          .object({
+            requestId: z.string().uuid(),
+            correlationId: z.string(),
+            generatedAt: z.string().datetime({ offset: true }),
+          })
+          .partial()
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+  },
+]);
+
+export const api: any = new Zodios(
+  'https://api.ddd-codegen-starter.local/v1',
+  endpoints
+);
+
+export function createApiClient(baseUrl: string, options?: ZodiosOptions): any {
+  return new Zodios(baseUrl, endpoints, options);
+}

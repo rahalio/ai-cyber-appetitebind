@@ -1,0 +1,119 @@
+openapi: 3.1.0
+info:
+  title: UseCases schemas
+  version: 0.1.0
+  description: AI use-case inventory and ownership.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+      description: Prefixed AI use-case id
+
+    AiUseCase:
+      type: object
+
+      x-dynamodb:
+        entityType: "USECASE"
+        pkPatternTemplate: "USECASE#${useCaseId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      required: [useCaseId, name, status, ownerId, createdAt, updatedAt]
+      properties:
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        name:
+          type: string
+        status:
+          type: string
+          enum: [proposed, assessing, approved, production, suspended, retired]
+        ownerId:
+          type: string
+        continuousLearning:
+          type: boolean
+        externalFacing:
+          type: boolean
+        customerImpact:
+          type: string
+          enum: [none, low, significant, high]
+        sector:
+          type: string
+          enum: [banking, insurance, other_fs]
+        mlopsRef:
+          type: string
+        accountableRegimeRole:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AiUseCaseCreate:
+      type: object
+      required: [name, ownerId]
+      properties:
+        name:
+          type: string
+        ownerId:
+          type: string
+        continuousLearning:
+          type: boolean
+          default: false
+        externalFacing:
+          type: boolean
+          default: false
+        customerImpact:
+          type: string
+          enum: [none, low, significant, high]
+        sector:
+          type: string
+          enum: [banking, insurance, other_fs]
+        description:
+          type: string
+
+    AssignOwnerRequest:
+      type: object
+      required: [ownerId]
+      properties:
+        ownerId:
+          type: string
+        accountableRegimeRole:
+          type: string
+          description: e.g. SM&CR senior manager reference
+
+    AiUseCaseListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiUseCase'
+        nextCursor:
+          type: string
+
+    AiUseCaseResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AiUseCase'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AiUseCaseListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AiUseCaseListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta

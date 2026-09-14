@@ -1,0 +1,173 @@
+openapi: 3.1.0
+info:
+  title: UseCases API
+  version: 0.1.0
+  description: |
+    AI use-case inventory and named accountable ownership (BR-9, BR-1 gate prelude).
+  x-domain: ucs
+  x-product-slug: ai-cyber-appetitebind
+servers:
+  - url: https://api.appetitebind.local
+security:
+  - apiKey: []
+tags:
+  - name: UseCases
+    description: AI use-case inventory and ownership
+paths:
+  /v1/use-cases:
+    get:
+      operationId: listAiUseCases
+      tags: [UseCases]
+      summary: List AI use cases
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiUseCase
+      x-dynamodb:
+        entityType: "USECASE"
+        pkPatternTemplate: "USECASE#${useCaseId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [proposed, assessing, approved, production, suspended, retired]
+        - name: continuousLearning
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: AI use-case inventory page
+          content:
+            application/json:
+              schema:
+                $ref: ./usecases.schemas.yaml#/components/schemas/AiUseCaseListResponse
+        '401':
+          $ref: ./common/responses.yaml#/components/responses/Unauthorized
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+    post:
+      operationId: registerAiUseCase
+      tags: [UseCases]
+      summary: Register an AI use case
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiUseCase
+      x-dynamodb:
+        entityType: "USECASE"
+        pkPatternTemplate: "USECASE#${useCaseId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./usecases.schemas.yaml#/components/schemas/AiUseCaseCreate
+      responses:
+        '201':
+          description: Use case registered
+          content:
+            application/json:
+              schema:
+                $ref: ./usecases.schemas.yaml#/components/schemas/AiUseCaseResponse
+        '422':
+          $ref: ./common/responses.yaml#/components/responses/UnprocessableEntity
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./usecases.schemas.yaml#/components/schemas/UseCaseId
+    get:
+      operationId: getAiUseCase
+      tags: [UseCases]
+      summary: Get AI use case
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiUseCase
+      x-dynamodb:
+        entityType: "USECASE"
+        pkPatternTemplate: "USECASE#${useCaseId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      responses:
+        '200':
+          description: Use case with owner and lifecycle state
+          content:
+            application/json:
+              schema:
+                $ref: ./usecases.schemas.yaml#/components/schemas/AiUseCaseResponse
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+  /v1/use-cases/{useCaseId}/owner:
+    parameters:
+      - name: useCaseId
+        in: path
+        required: true
+        schema:
+          $ref: ./usecases.schemas.yaml#/components/schemas/UseCaseId
+    put:
+      operationId: assignUseCaseOwner
+      tags: [UseCases]
+      summary: Assign accountable owner
+      description: >
+        Named accountable owner responsible for approval, review triggers, and
+        updates when accuracy, fairness, or compliance factors change.
+      security:
+        - apiKey: []
+        - bearerAuth: []
+      x-repository: AiUseCase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./usecases.schemas.yaml#/components/schemas/AssignOwnerRequest
+      responses:
+        '200':
+          description: Owner assigned
+          content:
+            application/json:
+              schema:
+                $ref: ./usecases.schemas.yaml#/components/schemas/AiUseCaseResponse
+        '404':
+          $ref: ./common/responses.yaml#/components/responses/NotFound
+        default:
+          $ref: ./common/responses.yaml#/components/responses/Problem
+components:
+  securitySchemes:
+    apiKey:
+      $ref: ./common/security.yaml#/components/securitySchemes/apiKey
+    bearerAuth:
+      $ref: ./common/security.yaml#/components/securitySchemes/bearerAuth

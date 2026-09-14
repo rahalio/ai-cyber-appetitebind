@@ -1,0 +1,295 @@
+openapi: 3.1.0
+info:
+  title: Controls schemas
+  version: 0.1.0
+  description: Control tests, hand-to-human rules, and kill-switches.
+paths: {}
+components:
+  schemas:
+    UseCaseId:
+      type: string
+      pattern: '^ucs_[0-9A-HJKMNP-TV-Z]{26}$'
+    TestId:
+      type: string
+      pattern: '^tst_[0-9A-HJKMNP-TV-Z]{26}$'
+    HandToHumanRuleId:
+      type: string
+      pattern: '^h2h_[0-9A-HJKMNP-TV-Z]{26}$'
+    KillSwitchDrillId:
+      type: string
+      pattern: '^ksd_[0-9A-HJKMNP-TV-Z]{26}$'
+
+    AiControlTest:
+      type: object
+
+      x-dynamodb:
+        entityType: "CONTROL_TEST"
+        pkPatternTemplate: "CONTROL_TEST#${testId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "CONTROL_TEST#${testId}"
+      required: [testId, useCaseId, testType, status, createdAt, updatedAt]
+      properties:
+        testId:
+          $ref: '#/components/schemas/TestId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        testType:
+          type: string
+          enum: [out_of_sample, stress, customer_journey, data_bias, accuracy]
+        status:
+          type: string
+          enum: [scheduled, running, passed, failed]
+        frequency:
+          type: string
+        lastEvidenceAt:
+          type: string
+          format: date-time
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AiControlTestCreate:
+      type: object
+      required: [useCaseId, testType]
+      properties:
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        testType:
+          type: string
+          enum: [out_of_sample, stress, customer_journey, data_bias, accuracy]
+        frequency:
+          type: string
+        ownerId:
+          type: string
+
+    TestEvidence:
+      type: object
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          enum: [passed, failed]
+        evidenceRef:
+          type: string
+        detail:
+          type: string
+        sampleSize:
+          type: integer
+
+    HandToHumanRule:
+      type: object
+
+      x-dynamodb:
+        entityType: "H2H_RULE"
+        pkPatternTemplate: "H2H_RULE#${handToHumanRuleId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "H2H_RULE#${handToHumanRuleId}"
+      required: [handToHumanRuleId, useCaseId, condition, destinationRole, createdAt, updatedAt]
+      properties:
+        handToHumanRuleId:
+          $ref: '#/components/schemas/HandToHumanRuleId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        condition:
+          type: string
+          description: e.g. confidence below tolerance or risk outside band
+        destinationRole:
+          type: string
+          example: human_underwriter
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SetHandToHumanRulesRequest:
+      type: object
+      required: [rules]
+      properties:
+        rules:
+          type: array
+          items:
+            type: object
+            required: [condition, destinationRole]
+            properties:
+              condition:
+                type: string
+              destinationRole:
+                type: string
+              active:
+                type: boolean
+                default: true
+
+    KillSwitch:
+      type: object
+
+      x-dynamodb:
+        entityType: "KILL_SWITCH"
+        pkPatternTemplate: "KILL_SWITCH#${useCaseId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+      required: [useCaseId, executableByRole, drillCadenceDays, createdAt, updatedAt]
+      properties:
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        executableByRole:
+          type: string
+        bcpReference:
+          type: string
+        remediationProtocol:
+          type: string
+        drillCadenceDays:
+          type: integer
+        lastDrillAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [registered, drilled, executed, inactive]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    KillSwitchDrill:
+      type: object
+
+      x-dynamodb:
+        entityType: "KILL_SWITCH_DRILL"
+        pkPatternTemplate: "KILL_SWITCH_DRILL#${killSwitchDrillId}"
+        skPatternTemplate: "METADATA"
+        pkPattern: "entity"
+        createdAtField: "createdAt"
+        updatedAtField: "updatedAt"
+        softDeleteEnabled: false
+        gsi1PKPatternTemplate: "USECASE#${useCaseId}"
+        gsi1SKPatternTemplate: "KILL_SWITCH_DRILL#${killSwitchDrillId}"
+      required: [killSwitchDrillId, useCaseId, executedBy, drilledAt, createdAt, updatedAt]
+      properties:
+        killSwitchDrillId:
+          $ref: '#/components/schemas/KillSwitchDrillId'
+        useCaseId:
+          $ref: '#/components/schemas/UseCaseId'
+        executedBy:
+          type: string
+        drilledAt:
+          type: string
+          format: date-time
+        timeToHaltSeconds:
+          type: integer
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    KillSwitchDrillRequest:
+      type: object
+      required: [executedBy]
+      properties:
+        executedBy:
+          type: string
+        notes:
+          type: string
+
+    KillSwitchExecuteRequest:
+      type: object
+      required: [executedBy, rationale]
+      properties:
+        executedBy:
+          type: string
+        rationale:
+          type: string
+
+    AiControlTestListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiControlTest'
+        nextCursor:
+          type: string
+
+    HandToHumanRuleListData:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/HandToHumanRule'
+        nextCursor:
+          type: string
+
+    AiControlTestResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AiControlTest'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    AiControlTestListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AiControlTestListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    HandToHumanRuleListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/HandToHumanRuleListData'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    KillSwitchResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/KillSwitch'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
+
+    KillSwitchDrillResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/KillSwitchDrill'
+        meta:
+          $ref: ./common/envelopes.yaml#/components/schemas/ResponseMeta
